@@ -1,4 +1,5 @@
 import email
+import sys
 
 try:
     import cchardet as chardet
@@ -38,16 +39,8 @@ class MHTMLPart(object):
 
 class MHTML(object):
 
-    def __init__(self, filename=None, fileobj=None, string=None):
-        if filename:
-            fileobj = open(filename, 'r')
-
-        if fileobj:
-            self.message = email.message_from_file(fileobj)
-        elif string:
-            self.message = email.message_from_string(string)
-        else:
-            raise TypeError('Nothing to open')
+    def __init__(self, message):
+        self.message = message
 
         if not self.message.is_multipart():
             raise TypeError('Not a valid MHTML file')
@@ -61,22 +54,43 @@ class MHTML(object):
             yield MHTMLPart(msg)
 
 
+
+def from_bytes(literal):
+    return MHTML(email.message_from_bytes(literal))
+
+
 def from_string(string):
-    return MHTML(string=string)
+    return MHTML(email.message_from_string(string))
 
 
 def from_filename(filename):
-    return MHTML(filename=filename)
+    fileobj = open(filename, 'rb')
+    return MHTML(email.message_from_binary_file(fileobj))
 
 
 def from_fileobj(fileobj):
-    return MHTML(fileobj=fileobj)
+    if 'b' in fileobj.mode:
+        return MHTML(email.message_from_binary_file(fileobj))
+    else:
+        return MHTML(email.message_from_file(fileobj))
 
 
 def main():
-    # mht = from_string(open('../196a14d7e5d5b290eff218cf86397eec54fcbdc85886fc72bfebe3c24cc84c9f.mhtml', 'r').read())
-    # mht = from_filename('../196a14d7e5d5b290eff218cf86397eec54fcbdc85886fc72bfebe3c24cc84c9f.mhtml')
-    mht = from_fileobj(open('../196a14d7e5d5b290eff218cf86397eec54fcbdc85886fc72bfebe3c24cc84c9f.mhtml', 'r'))
+    filename = sys.argv[1]
+
+    # mht = from_string(open(filename, 'r').read())
+    # for thing in mht:
+    #     print(thing)
+
+    # mht = from_bytes(open(filename, 'rb').read())
+    # for thing in mht:
+    #     print(thing)
+
+    # mht = from_filename(filename)
+    # for thing in mht:
+    #     print(thing)
+
+    mht = from_fileobj(open(filename, 'rb'))
     for thing in mht:
         print(thing)
 

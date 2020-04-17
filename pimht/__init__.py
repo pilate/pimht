@@ -1,0 +1,1 @@
+from .pimht import from_string, from_filename, from_fileobj

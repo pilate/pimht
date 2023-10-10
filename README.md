@@ -17,3 +17,9 @@ for part in mhtml:
     print(part)
 
 ```
+
+# Performance
+The `chardet` module, used by default, is slow. Performance can be improved by also installing `cchardet` with:
+```
+$ pip install pimht[speedups]
+```

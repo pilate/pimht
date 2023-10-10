@@ -1,7 +1,7 @@
-FROM python:3.8-alpine3.10
+FROM python:3.11-alpine
 
 RUN apk add build-base && \
-    pip install cchardet
+    pip install faust-cchardet
 
 RUN apk add bash
 

@@ -1,2 +1,2 @@
-# pimhtm
-mhtml parser
+# pimht
+Python mhtml parser

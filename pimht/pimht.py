@@ -14,7 +14,7 @@ class MHTMLPart:
         self.message = message
 
         self.headers = dict(message)
-        self.raw = message.get_payload()
+        self.raw = message.get_payload(decode=True) or b""
 
         self.content_type = self.message.get_content_type()
         self.is_text = self.content_type.startswith("text/")
@@ -28,7 +28,7 @@ class MHTMLPart:
         if not self.is_text:
             raise TypeError("MHTMLPart is not text")
 
-        return self.raw.decode(self.charset["encoding"], "ignore")
+        return self.raw.decode(self.charset["encoding"] or "utf-8", "ignore")
 
     def __str__(self) -> str:
         return f"<{self.__class__.__name__} headers={self.headers}>"

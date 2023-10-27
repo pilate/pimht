@@ -1,5 +1,6 @@
 import email
 import email.message
+import email.parser
 import sys
 import typing
 
@@ -7,6 +8,26 @@ try:
     import cchardet as chardet
 except ModuleNotFoundError:
     import chardet
+
+
+class FasterParser(email.parser.Parser):
+    """
+    Built-in 'Parser' will only process 8kb at a time
+    https://stackoverflow.com/questions/3543118/python-email-message-from-string-performance-with-large-data-in-email-body
+    """
+
+    def parse(self, fp, headersonly=False):
+        feedparser = email.parser.FeedParser(self._class, policy=self.policy)
+        if headersonly:
+            feedparser._set_headersonly()
+        while data := fp.read():  # removed read size limit
+            feedparser.feed(data)
+        return feedparser.close()
+
+
+class FasterBytesParser(email.parser.BytesParser):
+    def __init__(self, *args, **kwargs):
+        self.parser = FasterParser(*args, **kwargs)
 
 
 class MHTMLPart:
@@ -47,23 +68,26 @@ class MHTML:
 
 
 def from_bytes(mhtml_bytes: bytes) -> MHTML:
-    return MHTML(email.message_from_bytes(mhtml_bytes))
+    message = FasterBytesParser().parsebytes(mhtml_bytes)
+    return MHTML(message)
 
 
 def from_string(mhtml_str: str) -> MHTML:
-    return MHTML(email.message_from_string(mhtml_str))
-
-
-def from_filename(filename: str) -> MHTML:
-    with open(filename, "rb") as fileobj:
-        return MHTML(email.message_from_binary_file(fileobj))
+    message = FasterParser().parsestr(mhtml_str)
+    return MHTML(message)
 
 
 def from_fileobj(fileobj: typing.IO) -> MHTML:
     if "b" in fileobj.mode:
-        return MHTML(email.message_from_binary_file(fileobj))
+        message = FasterBytesParser().parse(fileobj)
+    else:
+        message = FasterParser().parse(fileobj)
+    return MHTML(message)
 
-    return MHTML(email.message_from_file(fileobj))
+
+def from_filename(filename: str) -> MHTML:
+    with open(filename, "rb") as fileobj:
+        return from_fileobj(fileobj)
 
 
 def main():

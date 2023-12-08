@@ -3,6 +3,7 @@ import email.message
 import email.parser
 import sys
 import typing
+from functools import cached_property
 
 try:
     import cchardet as chardet
@@ -35,10 +36,13 @@ class MHTMLPart:
         self.message = message
 
         self.headers = dict(message)
-        self.raw = message.get_payload(decode=True) or b""
 
         self.content_type = self.message.get_content_type()
         self.is_text = self.content_type.startswith("text/")
+
+    @cached_property
+    def raw(self) -> bytes:
+        return self.message.get_payload(decode=True) or b""
 
     @property
     def charset(self) -> dict:

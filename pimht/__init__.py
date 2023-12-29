@@ -1,3 +1,5 @@
+"""Module to simplify handling of MHTML archives."""
+
 from .pimht import (
     __version__,
     from_bytes,

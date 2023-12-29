@@ -122,6 +122,9 @@ def from_filename(filename: str) -> MHTML:
 
 
 def main():
+    """
+    When run directly, takes an MHTML archive path as the first argument and prints each MHTMLPart.
+    """
     filename = sys.argv[1]
 
     mht = from_filename(filename)

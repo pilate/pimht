@@ -24,7 +24,7 @@ class FasterParser(email.parser.Parser):
     def parse(self, fp, headersonly=False):
         feedparser = email.parser.FeedParser(self._class, policy=self.policy)
         if headersonly:
-            feedparser._set_headersonly()
+            feedparser._set_headersonly()  # pylint: disable=protected-access
         while data := fp.read():  # removed read size limit
             feedparser.feed(data)
         return feedparser.close()
@@ -33,7 +33,7 @@ class FasterParser(email.parser.Parser):
 class FasterBytesParser(email.parser.BytesParser):
     """Replacement for email.parser.BytesParser that removes 8kb chunking."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # pylint: disable=super-init-not-called
         self.parser = FasterParser(*args, **kwargs)
 
 
@@ -77,7 +77,7 @@ class MHTMLPart:
         return f"<{self.__class__.__name__} headers={self.headers}>"
 
 
-class MHTML:
+class MHTML:  # pylint: disable=too-few-public-methods
     """
     MHTML archive.
     Objects are iterable to allow processing/inspection of archive contents.

@@ -119,18 +119,3 @@ def from_filename(filename: str) -> MHTML:
     """Parse the contents of a file path as an MHTML object."""
     with open(filename, "rb") as fileobj:
         return from_fileobj(fileobj)
-
-
-def main():
-    """
-    When run directly, takes an MHTML archive path as the first argument and prints each MHTMLPart.
-    """
-    filename = sys.argv[1]
-
-    mht = from_filename(filename)
-    for thing in mht:
-        print(thing)
-
-
-if __name__ == "__main__":
-    main()

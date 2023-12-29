@@ -90,8 +90,8 @@ class MHTML:  # pylint: disable=too-few-public-methods
             raise TypeError("Not a valid MHTML file")
 
     def __iter__(self) -> typing.Iterator[MHTMLPart]:
-        for msg in self.message.walk():
-            yield MHTMLPart(msg)
+        for part in self.message.walk():
+            yield MHTMLPart(part)
 
 
 def from_bytes(mhtml_bytes: bytes) -> MHTML:

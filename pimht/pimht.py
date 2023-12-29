@@ -4,11 +4,15 @@ import email.parser
 import sys
 import typing
 from functools import cached_property
+from importlib.metadata import version
 
 try:
     import cchardet as chardet
 except ModuleNotFoundError:
     import chardet
+
+
+__version__ = version("pimht")
 
 
 class FasterParser(email.parser.Parser):

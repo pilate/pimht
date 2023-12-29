@@ -1,10 +1,10 @@
 import email
 import email.message
 import email.parser
+import functools
+import importlib.metadata
 import sys
 import typing
-from functools import cached_property
-from importlib.metadata import version
 
 try:
     import cchardet as chardet
@@ -12,7 +12,7 @@ except ModuleNotFoundError:
     import chardet
 
 
-__version__ = version("pimht")
+__version__ = importlib.metadata.version("pimht")
 
 
 class FasterParser(email.parser.Parser):
@@ -46,22 +46,22 @@ class MHTMLPart:
         self.headers = dict(message)
         """Headers for the MHTML part."""
 
-    @cached_property
+    @functools.cached_property
     def content_type(self) -> str:
         """Content-type of the MHTML part."""
         return self.message.get_content_type()
 
-    @cached_property
+    @functools.cached_property
     def is_text(self) -> bool:
         """Whether or not the parts content-type begins with 'text'."""
         return self.content_type.startswith("text/")
 
-    @cached_property
+    @functools.cached_property
     def raw(self) -> bytes:
         """The raw (bytes) content of the MHTML part."""
         return self.message.get_payload(decode=True) or b""
 
-    @cached_property
+    @functools.cached_property
     def text(self) -> str:
         """
         String representation of the MHTML part.

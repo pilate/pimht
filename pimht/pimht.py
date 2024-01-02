@@ -3,7 +3,6 @@ import email.message
 import email.parser
 import functools
 import importlib.metadata
-import sys
 import typing
 
 try:

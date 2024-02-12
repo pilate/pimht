@@ -63,4 +63,4 @@ def test_parsing():
             assert part.raw.startswith(b'@charset "utf-8";')
             assert part.text.startswith('@charset "utf-8";')
 
-    assert counter == 3
+    assert counter == 4

@@ -55,4 +55,11 @@ a:link, a:visited { color: rgb(56, 72, 143); text-decoration: none; }
 @media (max-width: 700px) {
   div { margin: 0px auto; width: auto; }
 }
+------MultipartBoundary--GLyFh2r1DHdxQ7GaQWN426BrmFa56qgvDCXIYaZNqT----
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: https://www.example.com/fake.png
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQAAAAA3bvkkAAAACklEQVR4AWNgAAAAAgABc3UBGAAA
+AABJRU5ErkJggg==
 ------MultipartBoundary--GLyFh2r1DHdxQ7GaQWN426BrmFa56qgvDCXIYaZNqT------

@@ -1,3 +1,4 @@
+import base64
 import functools
 import importlib.metadata
 import io
@@ -33,8 +34,16 @@ class MHTMLPart:
         return self.content_type.startswith("text/")
 
     @functools.cached_property
-    def raw(self) -> bytes:
+    def raw(self, decode=True) -> bytes:
         """The raw (bytes) content of the MHTML part."""
+        if decode:
+            encoding = self.headers.get("Content-Transfer-Encoding")
+            if encoding == "base64":
+                return base64.b64decode(self.content)
+            if encoding == "quoted-printable":
+                return quopri.decodestring(self.content)
+            raise ValueError("Unknown mhtml part encoding: %s", encoding)
+
         return self.content
 
     @functools.cached_property
@@ -73,8 +82,7 @@ class MHTML:  # pylint: disable=too-few-public-methods
                 if data:
                     # last newline is part of new boundary
                     data[-1] = data[-1][:-1]
-                    decoded_data = quopri.decodestring("".join(data))
-                    yield MHTMLPart(headers, decoded_data)
+                    yield MHTMLPart(headers, "".join(data))
                     data.clear()
 
                 headers = util.parse_headers(self.fp)

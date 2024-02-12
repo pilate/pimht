@@ -34,17 +34,14 @@ class MHTMLPart:
         return self.content_type.startswith("text/")
 
     @functools.cached_property
-    def raw(self, decode=True) -> bytes:
+    def raw(self) -> bytes:
         """The raw (bytes) content of the MHTML part."""
-        if decode:
-            encoding = self.headers.get("Content-Transfer-Encoding")
-            if encoding == "base64":
-                return base64.b64decode(self.content)
-            if encoding == "quoted-printable":
-                return quopri.decodestring(self.content)
-            raise ValueError("Unknown mhtml part encoding: %s", encoding)
-
-        return self.content
+        encoding = self.headers.get("Content-Transfer-Encoding")
+        if encoding == "base64":
+            return base64.b64decode(self.content)
+        if encoding == "quoted-printable":
+            return quopri.decodestring(self.content)
+        raise ValueError("Unknown mhtml part encoding: %s", encoding)
 
     @functools.cached_property
     def text(self) -> str:
@@ -70,10 +67,9 @@ class MHTML:  # pylint: disable=too-few-public-methods
 
     def __init__(self, mhtml: typing.TextIO):
         self.fp = mhtml
-        self.headers = util.parse_headers(mhtml)
 
     def __iter__(self) -> typing.Iterator[MHTMLPart]:
-        headers = self.headers
+        headers = util.parse_headers(self.fp)
         boundary = util.find_boundary(headers["Content-Type"])
 
         data = []
@@ -91,7 +87,7 @@ class MHTML:  # pylint: disable=too-few-public-methods
             data.append(line)
 
     def __str__(self) -> str:
-        return f"<{self.__class__.__name__} headers={self.headers}>"
+        return f"<{self.__class__.__name__} fieobj={self.fp}>"
 
 
 def from_bytes(mhtml_bytes: bytes) -> MHTML:

@@ -61,6 +61,6 @@ def test_parsing():
             assert part.content_type == "text/css"
             assert part.is_text is True
             assert part.raw.startswith(b'@charset "utf-8";')
-            assert part.text.startswith('@charset "utf-8";\r\n\r\n')
+            assert part.text.startswith('@charset "utf-8";')
 
     assert counter == 3

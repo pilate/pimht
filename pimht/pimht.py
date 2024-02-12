@@ -23,12 +23,14 @@ def parse_content_type(header):
             content_type.append(part)
             continue
         key, value = part.split("=")
+
         if value.startswith("'") and value.endswith("'"):
             value = value[1:-1]
         elif value.startswith('"') and value.endswith('"'):
             value = value[1:-1]
 
         content_type.append((key.strip(), value.strip()))
+
     return content_type
 
 
@@ -44,14 +46,11 @@ def parse_headers(fp):
         # continuation
         if line.startswith("\t"):
             if key:
-                headers[key] += line[1:].strip()
+                headers[key] += line[1:]
             continue
 
         key, value = line.split(":", 1)
         headers[key.strip()] = value.strip()
-
-    if "Content-Type" in headers:
-        headers["Content-Type"] = parse_content_type(headers["Content-Type"])
 
     return headers
 
@@ -66,7 +65,7 @@ class MHTMLPart:
     @functools.cached_property
     def content_type(self) -> str:
         """Content-type of the MHTML part."""
-        return self.headers.get("Content-Type")
+        return self.headers.get("Content-Type").split(";")[0]
 
     @functools.cached_property
     def is_text(self) -> bool:
@@ -94,6 +93,27 @@ class MHTMLPart:
         return f"<{self.__class__.__name__} headers={self.headers}>"
 
 
+def find_boundary(content_type) -> typing.Optional[str]:
+    """Search content-type header for a boundary"""
+    if ";" not in content_type:
+        return None
+
+    if "boundary=" not in content_type:
+        return None
+
+    parsed_content = parse_content_type(content_type)
+
+    # Look for new boundary
+    if isinstance(parsed_content, list):
+        for field in parsed_content:
+            if isinstance(field, tuple):
+                key, value = field
+                if key == "boundary":
+                    return f"--{value}"
+
+    return None
+
+
 class MHTML:  # pylint: disable=too-few-public-methods
     """
     MHTML archive.
@@ -103,32 +123,19 @@ class MHTML:  # pylint: disable=too-few-public-methods
     def __init__(self, mhtml: typing.TextIO):
         self.mhtml_fp = mhtml
 
-        self.headers = parse_headers(mhtml)
-
-        type_headers = self.headers["Content-Type"]
-        self.content_type = type_headers[0]
-
-        for field in type_headers:
-            if isinstance(field, tuple):
-                key, value = field
-                if key == "boundary":
-                    self.boundary_start = f"--{value}"
-
-        # consume newline of first mhtml part
-        mhtml.readline()
-
     def __iter__(self) -> typing.Iterator[MHTMLPart]:
         data = []
+        headers = parse_headers(self.mhtml_fp)
+        boundary = find_boundary(headers["Content-Type"])
 
         for line in self.mhtml_fp:
-            if line.startswith(self.boundary_start):
+            if line.startswith(boundary):
                 if data:
                     # last newline is part of new boundary
                     data[-1] = data[-1][:-1]
-
                     yield MHTMLPart(headers, quopri.decodestring("".join(data)))
+                    data = []
 
-                data = []
                 headers = parse_headers(self.mhtml_fp)
                 continue
 

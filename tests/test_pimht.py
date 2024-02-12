@@ -44,22 +44,23 @@ def test_parsing():
         assert isinstance(part, MHTMLPart)
         assert isinstance(part.headers, dict)
 
-        assert mhtml.headers.get("From") == "<Saved by Blink>"
-        assert mhtml.headers.get("Snapshot-Content-Location") == EXAMPLE_URL
-        assert mhtml.content_type == "multipart/related"
-
         if counter == 1:
+            assert part.headers.get("From") == "<Saved by Blink>"
+            assert part.headers.get("Snapshot-Content-Location") == EXAMPLE_URL
+            assert part.content_type == "multipart/related"
+            assert part.is_text is False
+
+        elif counter == 2:
             assert part.headers.get("Content-Location") == EXAMPLE_URL
             assert part.content_type == "text/html"
             assert part.is_text is True
             assert part.raw.startswith(b"<!DOCTYPE html><html>")
             assert part.text.startswith("<!DOCTYPE html><html>")
-            print(repr(part.text))
 
-        elif counter == 2:
+        elif counter == 3:
             assert part.content_type == "text/css"
             assert part.is_text is True
             assert part.raw.startswith(b'@charset "utf-8";')
             assert part.text.startswith('@charset "utf-8";\r\n\r\n')
 
-    assert counter == 2
+    assert counter == 3

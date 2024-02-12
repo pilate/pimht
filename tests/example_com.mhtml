@@ -1,0 +1,58 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: https://www.example.com/
+Subject: Example Domain
+Date: Fri, 29 Dec 2023 03:03:30 -0000
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--GLyFh2r1DHdxQ7GaQWN426BrmFa56qgvDCXIYaZNqT----"
+
+
+------MultipartBoundary--GLyFh2r1DHdxQ7GaQWN426BrmFa56qgvDCXIYaZNqT----
+Content-Type: text/html
+Content-ID: <frame-7D8E83A2D45F477AB6C398F3AE9BDB17@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://www.example.com/
+
+<!DOCTYPE html><html><head><meta http-equiv=3D"Content-Type" content=3D"tex=
+t/html; charset=3DUTF-8"><link rel=3D"stylesheet" type=3D"text/css" href=3D=
+"cid:css-abe2e82c-a3e6-420f-bdcd-7c12e58a7e6a@mhtml.blink" />
+    <title>Example Domain</title>
+
+   =20
+   =20
+    <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=
+=3D1">
+       =20
+</head>
+
+<body><div>
+    <h1>Example Domain</h1>
+    <p>This domain is for use in illustrative examples in documents. You ma=
+y use this
+    domain in literature without prior coordination or asking for permissio=
+n.</p>
+    <p><a href=3D"https://www.iana.org/domains/example">More information...=
+</a></p>
+</div></body></html>
+------MultipartBoundary--GLyFh2r1DHdxQ7GaQWN426BrmFa56qgvDCXIYaZNqT----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: cid:css-abe2e82c-a3e6-420f-bdcd-7c12e58a7e6a@mhtml.blink
+
+@charset "utf-8";
+
+body { background-color: rgb(240, 240, 242); margin: 0px; padding: 0px; fon=
+t-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open S=
+ans", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+
+div { width: 600px; margin: 5em auto; padding: 2em; background-color: rgb(2=
+53, 253, 255); border-radius: 0.5em; box-shadow: rgba(0, 0, 0, 0.02) 2px 3p=
+x 7px 2px; }
+
+a:link, a:visited { color: rgb(56, 72, 143); text-decoration: none; }
+
+@media (max-width: 700px) {
+  div { margin: 0px auto; width: auto; }
+}
+------MultipartBoundary--GLyFh2r1DHdxQ7GaQWN426BrmFa56qgvDCXIYaZNqT------

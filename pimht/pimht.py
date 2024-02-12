@@ -1,8 +1,7 @@
-import email
-import email.message
-import email.parser
 import functools
 import importlib.metadata
+import io
+import quopri
 import typing
 
 try:
@@ -14,41 +13,60 @@ except ModuleNotFoundError:
 __version__ = importlib.metadata.version("pimht")
 
 
-class FasterParser(email.parser.Parser):
-    """
-    Replacement for email.parser.Parser that removes 8kb chunking.
-    https://stackoverflow.com/questions/3543118/python-email-message-from-string-performance-with-large-data-in-email-body
-    """
+def parse_content_type(header):
+    if ";" not in header:
+        return header
 
-    def parse(self, fp, headersonly=False):
-        feedparser = email.parser.FeedParser(self._class, policy=self.policy)
-        if headersonly:
-            feedparser._set_headersonly()  # pylint: disable=protected-access
-        while data := fp.read():  # removed read size limit
-            feedparser.feed(data)
-        return feedparser.close()
+    content_type = []
+    for part in header.split(";"):
+        if "=" not in part:
+            content_type.append(part)
+            continue
+        key, value = part.split("=")
+        if value.startswith("'") and value.endswith("'"):
+            value = value[1:-1]
+        elif value.startswith('"') and value.endswith('"'):
+            value = value[1:-1]
+
+        content_type.append((key.strip(), value.strip()))
+    return content_type
 
 
-class FasterBytesParser(email.parser.BytesParser):
-    """Replacement for email.parser.BytesParser that removes 8kb chunking."""
+def parse_headers(fp):
+    headers = {}
 
-    def __init__(self, *args, **kwargs):  # pylint: disable=super-init-not-called
-        self.parser = FasterParser(*args, **kwargs)
+    key = None
+    for line in fp:
+        line = line.rstrip()
+        if not line:
+            break
+
+        # continuation
+        if line.startswith("\t"):
+            if key:
+                headers[key] += line[1:].strip()
+            continue
+
+        key, value = line.split(":", 1)
+        headers[key.strip()] = value.strip()
+
+    if "Content-Type" in headers:
+        headers["Content-Type"] = parse_content_type(headers["Content-Type"])
+
+    return headers
 
 
 class MHTMLPart:
     """Part of an MHTML archive."""
 
-    def __init__(self, message: email.message.Message):
-        self.message = message
-
-        self.headers = dict(message)
-        """Headers for the MHTML part."""
+    def __init__(self, headers: dict, content: str):
+        self.headers = headers
+        self.content = content
 
     @functools.cached_property
     def content_type(self) -> str:
         """Content-type of the MHTML part."""
-        return self.message.get_content_type()
+        return self.headers.get("Content-Type")
 
     @functools.cached_property
     def is_text(self) -> bool:
@@ -58,7 +76,7 @@ class MHTMLPart:
     @functools.cached_property
     def raw(self) -> bytes:
         """The raw (bytes) content of the MHTML part."""
-        return self.message.get_payload(decode=True) or b""
+        return self.content
 
     @functools.cached_property
     def text(self) -> str:
@@ -82,36 +100,59 @@ class MHTML:  # pylint: disable=too-few-public-methods
     Objects are iterable to allow processing/inspection of archive contents.
     """
 
-    def __init__(self, message: email.message.Message):
-        self.message = message
+    def __init__(self, mhtml: typing.TextIO):
+        self.mhtml_fp = mhtml
 
-        if not self.message.is_multipart():
-            raise TypeError("Not a valid MHTML file")
+        self.headers = parse_headers(mhtml)
+
+        type_headers = self.headers["Content-Type"]
+        self.content_type = type_headers[0]
+
+        for field in type_headers:
+            if isinstance(field, tuple):
+                key, value = field
+                if key == "boundary":
+                    self.boundary_start = f"--{value}"
+
+        # consume newline of first mhtml part
+        mhtml.readline()
 
     def __iter__(self) -> typing.Iterator[MHTMLPart]:
-        for part in self.message.walk():
-            yield MHTMLPart(part)
+        data = []
+
+        for line in self.mhtml_fp:
+            if line.startswith(self.boundary_start):
+                if data:
+                    # last newline is part of new boundary
+                    data[-1] = data[-1][:-1]
+
+                    yield MHTMLPart(headers, quopri.decodestring("".join(data)))
+
+                data = []
+                headers = parse_headers(self.mhtml_fp)
+                continue
+
+            data.append(line)
 
 
 def from_bytes(mhtml_bytes: bytes) -> MHTML:
     """Parse bytes as an MHTML object."""
-    message = FasterBytesParser().parsebytes(mhtml_bytes)
-    return MHTML(message)
+    fileobj = io.StringIO(mhtml_bytes.decode("ascii"))
+    return MHTML(fileobj)
 
 
 def from_string(mhtml_str: str) -> MHTML:
     """Parse a string as an MHTML object."""
-    message = FasterParser().parsestr(mhtml_str)
-    return MHTML(message)
+    return MHTML(io.StringIO(mhtml_str))
 
 
 def from_fileobj(fileobj: typing.IO) -> MHTML:
     """Parse a file object as an MHTML object."""
     if "b" in fileobj.mode:
-        message = FasterBytesParser().parse(fileobj)
-    else:
-        message = FasterParser().parse(fileobj)
-    return MHTML(message)
+        data = fileobj.read()
+        fileobj = io.StringIO(data.decode("ascii"))
+
+    return MHTML(fileobj)
 
 
 def from_filename(filename: str) -> MHTML:

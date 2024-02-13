@@ -39,13 +39,14 @@ def test_parsers():
 
 def test_parsing():
     mhtml = from_filename(EXAMPLE_PATH)
+
+    assert mhtml.headers.get("From") == "<Saved by Blink>"
+    assert mhtml.headers.get("Snapshot-Content-Location") == EXAMPLE_URL
+
     counter = 0
     for counter, part in enumerate(mhtml, start=1):
         assert isinstance(part, MHTMLPart)
         assert isinstance(part.headers, dict)
-
-        assert mhtml.headers.get("From") == "<Saved by Blink>"
-        assert mhtml.headers.get("Snapshot-Content-Location") == EXAMPLE_URL
 
         if counter == 1:
             assert part.headers.get("Content-Location") == EXAMPLE_URL

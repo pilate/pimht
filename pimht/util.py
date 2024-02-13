@@ -19,7 +19,7 @@ def read_headers(fp: typing.TextIO) -> typing.Mapping[str, str]:
             break
 
         # continuation
-        if line.startswith("\t"):
+        if line[0] in (" ", "\t"):
             if key:
                 headers[key] += line[1:]
             continue

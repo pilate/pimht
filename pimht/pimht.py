@@ -41,7 +41,7 @@ class MHTMLPart:
             return base64.b64decode(self.content)
         if encoding == "quoted-printable":
             return quopri.decodestring(self.content)
-        raise ValueError("Unknown mhtml part encoding: %s", encoding)
+        raise ValueError(f"Unknown mhtml part encoding: {encoding}")
 
     @functools.cached_property
     def text(self) -> str:
@@ -68,26 +68,35 @@ class MHTML:  # pylint: disable=too-few-public-methods
     def __init__(self, mhtml: typing.TextIO):
         self.fp = mhtml
 
-    def __iter__(self) -> typing.Iterator[MHTMLPart]:
-        headers = util.parse_headers(self.fp)
-        boundary = util.find_boundary(headers["Content-Type"])
+        self.fp.seek(0)
+        self.headers = util.read_headers(self.fp)
+        self.boundary = util.find_boundary(self.headers["Content-Type"])
 
+        # find the end of the container
+        self._fp_start = 0
+        while line := self.fp.readline():
+            if line.startswith(self.boundary):
+                break
+            self._fp_start = self.fp.tell()
+
+    def __iter__(self) -> typing.Iterator[MHTMLPart]:
+        self.fp.seek(self._fp_start)
         data = []
-        for line in self.fp:
-            if line.startswith(boundary):
+        while line := self.fp.readline():
+            if line.startswith(self.boundary):
                 if data:
                     # last newline is part of new boundary
                     data[-1] = data[-1][:-1]
                     yield MHTMLPart(headers, "".join(data))
                     data.clear()
 
-                headers = util.parse_headers(self.fp)
+                headers = util.read_headers(self.fp)
                 continue
 
             data.append(line)
 
     def __str__(self) -> str:
-        return f"<{self.__class__.__name__} fieobj={self.fp}>"
+        return f"<{self.__class__.__name__} fieobj={self.fp}, headers={self.headers}>"
 
 
 def from_bytes(mhtml_bytes: bytes) -> MHTML:
@@ -112,5 +121,4 @@ def from_fileobj(fileobj: typing.IO) -> MHTML:
 
 def from_filename(filename: str) -> MHTML:
     """Parse the contents of a file path as an MHTML object."""
-    with open(filename, "rb") as fileobj:
-        return from_fileobj(fileobj)
+    return MHTML(open(filename, "r"))

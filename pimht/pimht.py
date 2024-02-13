@@ -101,8 +101,7 @@ class MHTML:  # pylint: disable=too-few-public-methods
 
 def from_bytes(mhtml_bytes: bytes) -> MHTML:
     """Parse bytes as an MHTML object."""
-    fileobj = io.StringIO(mhtml_bytes.decode("ascii"))
-    return MHTML(fileobj)
+    return from_string(mhtml_bytes.decode("ascii"))
 
 
 def from_string(mhtml_str: str) -> MHTML:
@@ -113,12 +112,11 @@ def from_string(mhtml_str: str) -> MHTML:
 def from_fileobj(fileobj: typing.IO) -> MHTML:
     """Parse a file object as an MHTML object."""
     if "b" in fileobj.mode:
-        data = fileobj.read()
-        fileobj = io.StringIO(data.decode("ascii"))
+        fileobj = io.TextIOWrapper(fileobj, encoding="ascii")
 
     return MHTML(fileobj)
 
 
 def from_filename(filename: str) -> MHTML:
     """Parse the contents of a file path as an MHTML object."""
-    return MHTML(open(filename, "r"))
+    return MHTML(open(filename, "r", encoding="ascii"))

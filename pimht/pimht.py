@@ -1,9 +1,11 @@
-import email
-import email.message
-import email.parser
+import base64
 import functools
 import importlib.metadata
+import io
+import quopri
 import typing
+
+from . import util
 
 try:
     import cchardet as chardet
@@ -14,41 +16,17 @@ except ModuleNotFoundError:
 __version__ = importlib.metadata.version("pimht")
 
 
-class FasterParser(email.parser.Parser):
-    """
-    Replacement for email.parser.Parser that removes 8kb chunking.
-    https://stackoverflow.com/questions/3543118/python-email-message-from-string-performance-with-large-data-in-email-body
-    """
-
-    def parse(self, fp, headersonly=False):
-        feedparser = email.parser.FeedParser(self._class, policy=self.policy)
-        if headersonly:
-            feedparser._set_headersonly()  # pylint: disable=protected-access
-        while data := fp.read():  # removed read size limit
-            feedparser.feed(data)
-        return feedparser.close()
-
-
-class FasterBytesParser(email.parser.BytesParser):
-    """Replacement for email.parser.BytesParser that removes 8kb chunking."""
-
-    def __init__(self, *args, **kwargs):  # pylint: disable=super-init-not-called
-        self.parser = FasterParser(*args, **kwargs)
-
-
 class MHTMLPart:
     """Part of an MHTML archive."""
 
-    def __init__(self, message: email.message.Message):
-        self.message = message
-
-        self.headers = dict(message)
-        """Headers for the MHTML part."""
+    def __init__(self, headers: dict, content: str):
+        self.headers = headers
+        self.content = content
 
     @functools.cached_property
     def content_type(self) -> str:
         """Content-type of the MHTML part."""
-        return self.message.get_content_type()
+        return self.headers.get("Content-Type").split(";")[0]
 
     @functools.cached_property
     def is_text(self) -> bool:
@@ -58,7 +36,12 @@ class MHTMLPart:
     @functools.cached_property
     def raw(self) -> bytes:
         """The raw (bytes) content of the MHTML part."""
-        return self.message.get_payload(decode=True) or b""
+        encoding = self.headers.get("Content-Transfer-Encoding")
+        if encoding == "base64":
+            return base64.b64decode(self.content)
+        if encoding == "quoted-printable":
+            return quopri.decodestring(self.content)
+        raise ValueError(f"Unknown mhtml part encoding: {encoding}")
 
     @functools.cached_property
     def text(self) -> str:
@@ -82,39 +65,58 @@ class MHTML:  # pylint: disable=too-few-public-methods
     Objects are iterable to allow processing/inspection of archive contents.
     """
 
-    def __init__(self, message: email.message.Message):
-        self.message = message
+    def __init__(self, mhtml: typing.TextIO):
+        self.fp = mhtml
 
-        if not self.message.is_multipart():
-            raise TypeError("Not a valid MHTML file")
+        self.fp.seek(0)
+        self.headers = util.read_headers(self.fp)
+        self.boundary = util.find_boundary(self.headers["Content-Type"])
+
+        # find the end of the container
+        self._fp_start = 0
+        while line := self.fp.readline():
+            if line.startswith(self.boundary):
+                break
+            self._fp_start = self.fp.tell()
 
     def __iter__(self) -> typing.Iterator[MHTMLPart]:
-        for part in self.message.walk():
-            yield MHTMLPart(part)
+        self.fp.seek(self._fp_start)
+        data = []
+        while line := self.fp.readline():
+            if line.startswith(self.boundary):
+                if data:
+                    # last newline is part of new boundary
+                    data[-1] = data[-1][:-1]
+                    yield MHTMLPart(headers, "".join(data))
+                    data.clear()
+
+                headers = util.read_headers(self.fp)
+                continue
+
+            data.append(line)
+
+    def __str__(self) -> str:
+        return f"<{self.__class__.__name__} fieobj={self.fp}, headers={self.headers}>"
 
 
 def from_bytes(mhtml_bytes: bytes) -> MHTML:
     """Parse bytes as an MHTML object."""
-    message = FasterBytesParser().parsebytes(mhtml_bytes)
-    return MHTML(message)
+    return from_string(mhtml_bytes.decode("ascii"))
 
 
 def from_string(mhtml_str: str) -> MHTML:
     """Parse a string as an MHTML object."""
-    message = FasterParser().parsestr(mhtml_str)
-    return MHTML(message)
+    return MHTML(io.StringIO(mhtml_str))
 
 
 def from_fileobj(fileobj: typing.IO) -> MHTML:
     """Parse a file object as an MHTML object."""
     if "b" in fileobj.mode:
-        message = FasterBytesParser().parse(fileobj)
-    else:
-        message = FasterParser().parse(fileobj)
-    return MHTML(message)
+        fileobj = io.TextIOWrapper(fileobj, encoding="ascii")
+
+    return MHTML(fileobj)
 
 
 def from_filename(filename: str) -> MHTML:
     """Parse the contents of a file path as an MHTML object."""
-    with open(filename, "rb") as fileobj:
-        return from_fileobj(fileobj)
+    return MHTML(open(filename, "r", encoding="ascii"))

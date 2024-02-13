@@ -62,4 +62,10 @@ def test_parsing():
             assert part.raw.startswith(b'@charset "utf-8";')
             assert part.text.startswith('@charset "utf-8";')
 
+        elif counter == 3:
+            assert part.content_type == "image/png"
+            assert part.is_text is False
+            assert isinstance(part.raw, bytes)
+            assert part.raw.startswith(b'\x89PNG')
+
     assert counter == 3

@@ -23,3 +23,5 @@ The `chardet` module, used by default, is slow. Performance can be improved by a
 ```
 $ pip install pimht[speedups]
 ```
+
+This is aimed specifically at parsing Google Chrome generated snapshots as fast as possible, but feel free to report issues with MHTML files from other sources.

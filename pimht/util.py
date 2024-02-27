@@ -1,4 +1,3 @@
-import email.header
 import re
 import typing
 
@@ -27,17 +26,6 @@ def read_headers(fp: typing.TextIO) -> typing.Mapping[str, str]:
 
         key, value = line.split(":", 1)
         headers[key.strip()] = value.strip()
-
-    # rfc 2047 decoding
-    for key, value in headers.items():
-        if "=?" in value:
-            new_value = ""
-            for byte_str, encoding in email.header.decode_header(value):
-                if not encoding:
-                    new_value += byte_str
-                    continue
-                new_value += byte_str.decode(encoding)
-            headers[key] = new_value
 
     return headers
 

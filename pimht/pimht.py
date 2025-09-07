@@ -1,4 +1,3 @@
-import base64
 import functools
 import importlib.metadata
 import io
@@ -6,6 +5,11 @@ import quopri
 import typing
 
 from . import util
+
+try:
+    import pybase64 as base64
+except ModuleNotFoundError:
+    import base64
 
 try:
     import cchardet as chardet
@@ -82,8 +86,10 @@ class MHTML:  # pylint: disable=too-few-public-methods
     def __iter__(self) -> typing.Iterator[MHTMLPart]:
         self.fp.seek(self._fp_start)
         data = []
-        while line := self.fp.readline():
-            if line.startswith(self.boundary):
+        boundary = self.boundary
+        readline = self.fp.readline
+        while line := readline():
+            if (line[0] == "-") and line.startswith(boundary):
                 if data:
                     # last newline is part of new boundary
                     data[-1] = data[-1][:-1]

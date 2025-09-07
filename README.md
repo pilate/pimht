@@ -19,7 +19,7 @@ for part in mhtml:
 ```
 
 # Performance
-The `chardet` module, used by default, is slow. Performance can be improved by also installing `cchardet` with:
+The `chardet` module, used by default, is slow. Performance can be improved by also installing `cchardet` and `pybase64` with:
 ```
 $ pip install pimht[speedups]
 ```

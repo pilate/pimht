@@ -87,8 +87,7 @@ class MHTML:  # pylint: disable=too-few-public-methods
         self.fp.seek(self._fp_start)
         data = []
         boundary = self.boundary
-        readline = self.fp.readline
-        while line := readline():
+        for line in self.fp:
             if (line[0] == "-") and line.startswith(boundary):
                 if data:
                     # last newline is part of new boundary

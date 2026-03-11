@@ -9,13 +9,25 @@ $ pip install pimht
 # Example
 
 ```python
-
 import pimht
 
 mhtml = pimht.from_filename("test.mhtml")
 for part in mhtml:
-    print(part)
+    print(part.content_type, len(part.raw))
+```
 
+# Modifying
+
+```python
+import pimht
+
+mhtml = pimht.from_filename("page.mhtml")
+for part in mhtml.parts:
+    if part.is_text:
+        part.text = part.text.replace("Hello", "Goodbye")
+
+with open("modified.mhtml", "wb") as f:
+    f.write(mhtml.to_bytes())
 ```
 
 # Performance

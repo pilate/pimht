@@ -21,7 +21,7 @@ for part in mhtml:
 ```python
 import pimht
 
-mhtml = pimht.from_filename("page.mhtml")
+mhtml = pimht.from_filename("test.mhtml")
 for part in mhtml.parts:
     if part.is_text:
         part.text = part.text.replace("Hello", "Goodbye")

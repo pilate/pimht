@@ -1,22 +1,20 @@
 import re
-import typing
 
 
-BOUND_RE = re.compile(r";boundary=(['\"])([^'\"]+)\1")
+BOUND_RE = re.compile(r";\s*boundary=(['\"])([^'\"]+)\1")
 
 
-def read_headers(fp: typing.TextIO) -> typing.Mapping[str, str]:
+def parse_headers(raw: bytes) -> dict[str, str]:
     """
-    Read lines and split into key/value pairs from fp until newline.
-    Supports tab being used to continue previous header line.
+    Parse MIME headers from raw bytes into a str dict.
+    Supports tab/space continuation of previous header line.
     """
     headers = {}
 
     key = None
-    while line := fp.readline():
-        line = line.rstrip()
+    for line in raw.decode("ascii").split("\n"):
         if not line:
-            break
+            continue
 
         # continuation
         if line[0] in (" ", "\t"):
@@ -30,8 +28,9 @@ def read_headers(fp: typing.TextIO) -> typing.Mapping[str, str]:
     return headers
 
 
-def find_boundary(content_type: str) -> str:
+def find_boundary(content_type: str) -> bytes:
+    """Extract and return the MIME boundary as bytes."""
     if match := BOUND_RE.search(content_type):
-        return "--" + match.group(2)
+        return b"--" + match.group(2).encode("ascii")
 
     raise TypeError("No boundary in Content-Type")

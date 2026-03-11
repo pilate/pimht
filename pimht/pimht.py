@@ -1,6 +1,5 @@
 import functools
 import importlib.metadata
-import io
 import quopri
 import typing
 
@@ -23,7 +22,7 @@ __version__ = importlib.metadata.version("pimht")
 class MHTMLPart:
     """Part of an MHTML archive."""
 
-    def __init__(self, headers: dict, content: str):
+    def __init__(self, headers: dict, content: bytes):
         self.headers = headers
         self.content = content
 
@@ -56,8 +55,16 @@ class MHTMLPart:
         if not self.is_text:
             raise TypeError("MHTMLPart is not text")
 
-        charset = chardet.detect(self.raw)
-        return self.raw.decode(charset["encoding"] or "utf-8", "ignore")
+        # Try charset from Content-Type header before expensive chardet
+        ct = self.headers.get("Content-Type", "")
+        for param in ct.split(";")[1:]:
+            param = param.strip()
+            if param.lower().startswith("charset="):
+                charset = param.split("=", 1)[1].strip().strip("'\"")
+                return self.raw.decode(charset, "ignore")
+
+        detected = chardet.detect(self.raw)
+        return self.raw.decode(detected["encoding"] or "utf-8", "ignore")
 
     def __str__(self) -> str:
         return f"<{self.__class__.__name__} headers={self.headers}>"
@@ -69,59 +76,58 @@ class MHTML:  # pylint: disable=too-few-public-methods
     Objects are iterable to allow processing/inspection of archive contents.
     """
 
-    def __init__(self, mhtml: typing.TextIO):
-        self.fp = mhtml
+    def __init__(self, content: bytes):
+        # Normalize line endings (matches text-mode behavior, simplifies parsing)
+        content = content.replace(b"\r\n", b"\n")
 
-        self.fp.seek(0)
-        self.headers = util.read_headers(self.fp)
+        sep = content.find(b"\n\n")
+        self.headers = util.parse_headers(content[:sep])
         self.boundary = util.find_boundary(self.headers["Content-Type"])
-
-        # find the end of the container
-        self._fp_start = 0
-        while line := self.fp.readline():
-            if line.startswith(self.boundary):
-                break
-            self._fp_start = self.fp.tell()
+        self._body = content[sep + 2:]
 
     def __iter__(self) -> typing.Iterator[MHTMLPart]:
-        self.fp.seek(self._fp_start)
-        data = []
-        boundary = self.boundary
-        for line in self.fp:
-            if (line[0] == "-") and line.startswith(boundary):
-                if data:
-                    # last newline is part of new boundary
-                    data[-1] = data[-1][:-1]
-                    yield MHTMLPart(headers, "".join(data))
-                    data.clear()
+        segments = self._body.split(self.boundary)
+        for segment in segments[1:]:
+            if segment[:2] == b"--":
+                break
 
-                headers = util.read_headers(self.fp)
+            sep = segment.find(b"\n\n")
+            if sep == -1:
                 continue
 
-            data.append(line)
+            # Skip leading \n after boundary marker
+            headers = util.parse_headers(segment[1:sep])
+            content = segment[sep + 2:]
+
+            # Remove trailing newline (part of next boundary delimiter)
+            if content.endswith(b"\n"):
+                content = content[:-1]
+
+            yield MHTMLPart(headers, content)
 
     def __str__(self) -> str:
-        return f"<{self.__class__.__name__} fieobj={self.fp}, headers={self.headers}>"
+        return f"<{self.__class__.__name__} headers={self.headers}>"
 
 
 def from_bytes(mhtml_bytes: bytes) -> MHTML:
     """Parse bytes as an MHTML object."""
-    return from_string(mhtml_bytes.decode("ascii"))
+    return MHTML(mhtml_bytes)
 
 
 def from_string(mhtml_str: str) -> MHTML:
     """Parse a string as an MHTML object."""
-    return MHTML(io.StringIO(mhtml_str))
+    return MHTML(mhtml_str.encode("ascii"))
 
 
 def from_fileobj(fileobj: typing.IO) -> MHTML:
     """Parse a file object as an MHTML object."""
-    if "b" in fileobj.mode:
-        fileobj = io.TextIOWrapper(fileobj, encoding="ascii")
-
-    return MHTML(fileobj)
+    data = fileobj.read()
+    if isinstance(data, str):
+        data = data.encode("ascii")
+    return MHTML(data)
 
 
 def from_filename(filename: str) -> MHTML:
     """Parse the contents of a file path as an MHTML object."""
-    return MHTML(open(filename, "r", encoding="ascii"))
+    with open(filename, "rb") as f:
+        return MHTML(f.read())
